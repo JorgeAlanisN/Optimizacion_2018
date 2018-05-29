@@ -201,41 +201,64 @@ float* getDistance(float** biomass, float** friction, int x, int y, int rows, in
     cost_raster = new float*[rows];
     output_raster = new float*[rows];
     active_raster = new bool*[rows];
+#pragma omp sections
+    {
+        #pragma omp section
+        {
+            for(int i = 0; i< rows; ++i){
+                cost_raster[i] = new float[cols];
+                output_raster[i] = new float[cols];
+                active_raster[i] = new bool[cols];
+            }
+        }
+        #pragma omp section
+        {
+            for(int x = 0; x < ROW; x++){
+                for(int y = 0; y < COL; y++){
+                    if(grid[x][y] == 999999)
+                        grid[x][y] = -9999;
 
-    for(int i = 0; i< rows; ++i){
-        cost_raster[i] = new float[cols];
-        output_raster[i] = new float[cols];
-        active_raster[i] = new bool[cols];
-    }
-
-    for(int x = 0; x < ROW; x++){
-        for(int y = 0; y < COL; y++){
-            if(grid[x][y] == 999999)
-                grid[x][y] = -9999;
-
-            cost_raster[x][y] = friction[x][y];
-            active_raster[x][y] = false;
-            output_raster[x][y] = INT_MAX;
+                    cost_raster[x][y] = friction[x][y];
+                    active_raster[x][y] = false;
+                    output_raster[x][y] = INT_MAX;
+                }
+            }   
         }
     }
-
+    
+    #pragma omp barrier
     active_raster[srcX][srcY] = 1;
 
     //se obtienen los vecinos proximos al origen y sus distancias calculadas. ordenas de menor a mayor
     set<cell> distancias = vecinos(srcX,srcY,rows,cols,cost_raster);
 
     output_raster =  acumulados(distancias, srcX, srcY, biomass, intervals, xMin, xMax, yMin, yMax,cost_raster,active_raster,output_raster);
+    
+    #pragma omp sections
+    {
+        #pragma omp section
+        {
+            #pragma omp for colapse(2)
+                for(int r=0; r<ROW; r++){
+                    for(int c=0; c<COL; c++){
+                        if(output_raster[r][c] == INT_MAX)
+                            output_raster[r][c] = -9999;
 
-    for(int r=0; r<ROW; r++){
-        for(int c=0; c<COL; c++){
-            if(output_raster[r][c] == INT_MAX)
-                output_raster[r][c] = -9999;
-
+                    }
+                }
+        }
+        
+        #pragma omp section
+        {
+            #pragma omp for
+                for(int m=0; m < rows; m++){
+                    delete[] cost_raster[m];
+                    delete[] active_raster[m];
+                }
+            
         }
     }
-    for(int m=0; m < rows; m++){
-        delete[] cost_raster[m];
-        delete[] active_raster[m];
-    }
+    
+    #pragma omp barrier   
     return output_raster;
 }
