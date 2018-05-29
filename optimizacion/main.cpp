@@ -246,15 +246,12 @@ int main(int argc, const char** argv){
 
 		cout<<"Parallel region"<<endl;
 
-        #pragma omp parallel for collapse(2) 
+        #pragma omp parallel for collapse(2) shchedule(guided)
             for (int i = 0; i < rows; i++) {
                 for (int j = 0; j < cols; j++) {
                     centroid.x = i; centroid.y = j;
 
-                    #pragma omp parallel
-                    
-                    if (biomass[i][j] > 0) {
-                    	#pragma omp shchedule(guided)
+                    if (biomass[i][j] > 0) { 
                         cout << biomass[i][j] << endl;
                         coords.open("coords"+ std::to_string(omp_get_thread_num()) +".txt");
                         cout << centroid.x << ", " << centroid.y << endl;
